@@ -4,11 +4,25 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "tsc --noEmit && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.7.13"
+    "@astrojs/preact": "^4.0.11",
+    "@astrojs/tailwind": "^6.0.2",
+    "@supabase/supabase-js": "^2.49.8",
+    "astro": "^5.7.13",
+    "preact": "^10.26.6",
+    "tailwindcss": "^3.4.17",
+    "zustand": "^5.0.4"
+  },
+  "devDependencies": {
+    "@astrojs/ts-plugin": "^1.10.4",
+    "@types/node": "^22.15.19",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "typescript": "^5.8.3"
   }
 }

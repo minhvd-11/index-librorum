@@ -1,5 +1,19 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "jsx": "preserve",
+    "jsxImportSource": "preact",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "baseUrl": "src",
+    "paths": {
+      "~/*": ["*"]
+    },
+    "types": ["@astrojs/ts-plugin", "node", "vite/client"]
+  },
+  "include": ["src/**/*", "astro.config.mjs", "src/env.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }
