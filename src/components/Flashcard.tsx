@@ -1,6 +1,6 @@
 import { h } from "preact";
 import { useState } from "preact/hooks";
-import { useWordStore } from "~/stores/wordStore";
+import { wordStore } from "~/stores/wordStore";
 import { supabase } from "~/lib/supabase";
 import type { Word } from "~/types";
 
@@ -10,7 +10,6 @@ interface FlashcardProps {
 
 export default function Flashcard({ word }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
-  const { setCurrentWord, updateProgress } = useWordStore();
 
   const handleCorrect = async () => {
     const {
@@ -31,8 +30,8 @@ export default function Flashcard({ word }: FlashcardProps) {
       incorrectAttempts: 0,
     };
 
-    setCurrentWord(word);
-    updateProgress(progress);
+    wordStore.setCurrentWord(word);
+    wordStore.updateProgress(progress);
 
     const { error } = await supabase.from("progress").upsert(progress);
     if (error) console.error("Error saving progress:", error.message);

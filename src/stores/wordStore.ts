@@ -1,22 +1,26 @@
-import { create } from "zustand";
+import { signal } from "@preact/signals";
 import type { Word, Progress } from "~/types";
 
 interface WordStore {
-  currentWord: Word | null;
+  currentWord?: Word;
   progress: Progress[];
-  setCurrentWord: (word: Word) => void;
-  updateProgress: (progress: Progress) => void;
+  quizOptions: Word[];
 }
 
-export const useWordStore = create<WordStore>((set) => ({
-  currentWord: null,
-  progress: [],
-  setCurrentWord: (word) => set({ currentWord: word }),
-  updateProgress: (progress) =>
-    set((state) => ({
-      progress: [
-        ...state.progress.filter((p) => p.wordId !== progress.wordId),
-        progress,
-      ],
-    })),
-}));
+export const wordStore = {
+  currentWord: signal<Word>(),
+  progress: signal<Progress[]>([]),
+  quizOptions: signal<Word[]>([]),
+  setCurrentWord: (word: Word) => {
+    wordStore.currentWord.value = word;
+  },
+  setQuizOptions: (options: Word[]) => {
+    wordStore.quizOptions.value = options;
+  },
+  updateProgress: (progress: Progress) => {
+    wordStore.progress.value = [
+      ...wordStore.progress.value.filter((p) => p.wordId !== progress.wordId),
+      progress,
+    ];
+  },
+};
