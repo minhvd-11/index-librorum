@@ -37,6 +37,10 @@ jobs:
             ${{ runner.os }}-node-
       - name: Install Dependencies
         run: npm install
+      - name: Debug Environment Variables
+        run: |
+          echo "PUBLIC_SUPABASE_URL: $PUBLIC_SUPABASE_URL"
+          echo "PUBLIC_SUPABASE_KEY: ${PUBLIC_SUPABASE_KEY:0:10}..."
       - name: Build Astro
         run: npm run build
       - name: Upload Artifact

@@ -13,4 +13,5 @@ export default defineConfig({
     include: ["@preact/compat", "@preact/signals"],
   },
   envPrefix: ["PUBLIC_"],
+  envDir: process.cwd(),
 });
