@@ -17,9 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,11 +34,10 @@ jobs:
             ${{ runner.os }}-node-
       - name: Install Dependencies
         run: npm install
-      - name: Debug Environment Variables
-        run: |
-          echo "PUBLIC_SUPABASE_URL: $PUBLIC_SUPABASE_URL"
-          echo "PUBLIC_SUPABASE_KEY: ${PUBLIC_SUPABASE_KEY:0:10}..."
       - name: Build Astro
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: npm run build
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
