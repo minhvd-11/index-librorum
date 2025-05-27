@@ -1,119 +1,103 @@
 import { h } from "preact";
 import { useState, useEffect } from "preact/hooks";
-import { wordStore } from "~/stores/wordStore";
 import { supabase } from "~/lib/supabase";
-import { useSignal } from "@preact/signals";
+import { wordStore } from "~/stores/wordStore";
 import type { Progress, Word } from "~/types";
 
-// Utility to shuffle an array
-const shuffleArray = function <T>(array: T[]): T[] {
-  return array.sort(() => Math.random() - 0.5);
-};
-
-interface QuizProps {
+interface Props {
   words: Word[];
 }
 
-export default function Quiz({ words }: QuizProps) {
-  const [selectedAnswer, setSelectedAnswer] = useState<string>("");
-  const [isCorrect, setIsCorrect] = useState<boolean>(false);
-  const currentWord = wordStore.currentWord;
-  const quizOptions = wordStore.quizOptions;
+export default function Quiz({ words }: Props) {
+  const [currentQuestion, setCurrentQuestion] = useState<Word | null>(null);
+  const [options, setOptions] = useState<Word[]>([]);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!words || words.length < 2) return;
-
-    const randomWord = words[Math.floor(Math.random() * words.length)];
-    const incorrectOptions = shuffleArray(
-      words.filter((w) => w.id !== randomWord.id)
-    ).slice(0, Math.min(3, words.length - 1));
-    const options = shuffleArray([randomWord, ...incorrectOptions]);
-
-    wordStore.setCurrentWord(randomWord);
-    wordStore.setQuizOptions(options);
+    if (words.length > 0) {
+      const randomWord = words[Math.floor(Math.random() * words.length)];
+      const randomOptions = [...words]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 4)
+        .filter((w) => w.id !== randomWord.id);
+      if (!randomOptions.find((w) => w.id === randomWord.id)) {
+        randomOptions[Math.floor(Math.random() * 4)] = randomWord;
+      }
+      wordStore.setCurrentWord(randomWord);
+      wordStore.setQuizOptions(randomOptions);
+      setCurrentQuestion(randomWord);
+      setOptions(randomOptions);
+    }
   }, [words]);
 
-  const handleAnswer = async (selected: string) => {
-    if (!currentWord.value) return;
-
-    setSelectedAnswer(selected);
-    const correct = selected === currentWord.value?.translation;
-    setIsCorrect(correct);
+  const handleAnswer = async (selected: Word) => {
+    if (!currentQuestion) return;
+    const isCorrect = selected.id === currentQuestion.id;
+    setFeedback(isCorrect ? "Correct!" : "Try again!");
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("User not logged in");
-      return;
+    if (user) {
+      const progress: Progress = {
+        userId: user.id,
+        wordId: currentQuestion.id,
+        status: isCorrect ? "learning" : "review",
+        lastReviewed: new Date(),
+        nextReview: new Date(
+          Date.now() + (isCorrect ? 24 : 12) * 60 * 60 * 1000
+        ),
+        correctAttempts: isCorrect ? 1 : 0,
+        incorrectAttempts: isCorrect ? 0 : 1,
+      };
+      wordStore.updateProgress(progress);
+      await supabase.from("progress").upsert(progress);
     }
 
-    const progress: Progress = {
-      userId: user.id,
-      wordId: currentWord.value.id,
-      status: correct ? "learning" : "review",
-      lastReviewed: new Date(),
-      nextReview: new Date(Date.now() + (correct ? 24 : 12) * 60 * 60 * 1000),
-      correctAttempts: correct ? 1 : 0,
-      incorrectAttempts: correct ? 0 : 1,
-    };
-
-    wordStore.updateProgress(progress);
-    const { error } = await supabase.from("progress").upsert(progress);
-    if (error) console.error("Error saving progress:", error.message);
-
     setTimeout(() => {
-      setSelectedAnswer("");
-      setIsCorrect(false);
-      const newRandomWord = words[Math.floor(Math.random() * words.length)];
-      const incorrectOptions = shuffleArray(
-        words.filter((w) => w.id !== newRandomWord.id)
-      ).slice(0, Math.min(3, words.length - 1));
-      wordStore.setCurrentWord(newRandomWord);
-      wordStore.setQuizOptions(
-        shuffleArray([newRandomWord, ...incorrectOptions])
-      );
-    }, 1500);
+      setFeedback(null);
+      const nextWord = words[Math.floor(Math.random() * words.length)];
+      const nextOptions = [...words]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 4)
+        .filter((w) => w.id !== nextWord.id);
+      if (!nextOptions.find((w) => w.id === nextWord.id)) {
+        nextOptions[Math.floor(Math.random() * 4)] = nextWord;
+      }
+      wordStore.setCurrentWord(nextWord);
+      wordStore.setQuizOptions(nextOptions);
+      setCurrentQuestion(nextWord);
+      setOptions(nextOptions);
+    }, 1000);
   };
 
-  if (!words || words.length < 2) {
-    return <p>Not enough words to start the quiz. Please add more words.</p>;
-  }
-
-  if (!currentWord.value || quizOptions.value.length === 0) {
-    return <p>Loading quiz...</p>;
+  if (!currentQuestion) {
+    return <p className="text-gray-600 dark:text-gray-300">Loading quiz...</p>;
   }
 
   return (
     <div className="p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-md">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        What is the translation of "{currentWord.value.word}"?
-      </h2>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        What is the translation of "{currentQuestion.word}"?
+      </h3>
       <div className="grid gap-2">
-        {quizOptions.value.map((option) => (
+        {options.map((option) => (
           <button
             key={option.id}
-            className={`px-4 py-2 rounded transition-colors ${
-              selectedAnswer === option.translation
-                ? isCorrect
-                  ? "bg-green-500 text-white"
-                  : "bg-red-500 text-white"
-                : "bg-blue-500 text-white hover:bg-blue-600"
-            }`}
-            onClick={() => handleAnswer(option.translation)}
-            disabled={!!selectedAnswer}
+            onClick={() => handleAnswer(option)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
             {option.translation}
           </button>
         ))}
       </div>
-      {isCorrect !== null && (
+      {feedback && (
         <p
-          className={`mt-4 text-lg ${
-            isCorrect ? "text-green-600" : "text-red-600"
+          className={`mt-2 ${
+            feedback === "Correct!" ? "text-green-500" : "text-red-500"
           }`}
         >
-          {isCorrect ? "Correct!" : "Incorrect, try again!"}
+          {feedback}
         </p>
       )}
     </div>

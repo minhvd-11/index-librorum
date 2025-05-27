@@ -37,7 +37,7 @@ jobs:
       - name: Build Astro
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PUBLIC_SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: npm run build
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
