@@ -3,10 +3,30 @@ import Layout from "../layouts/Layout.astro";
 import Flashcard from "../components/Flashcard";
 import Quiz from "../components/Quiz";
 import { supabase } from "~/lib/supabase";
-import type { Word } from "~/types";
+import type { Progress, Word } from "~/types";
 
-// Fetch words (public data, no auth required)
-const { data: words, error: wordsError } = await supabase
+interface ApiWord {
+  id: string;
+  word: string;
+  translation: string;
+  example_sentence: string;
+  audio_url?: string;
+  difficulty: "easy" | "medium" | "hard";
+  category: string | null;
+}
+
+// Map API data to Word interface
+const mapApiWordToWord = (apiWord: ApiWord): Word => ({
+  id: apiWord.id,
+  word: apiWord.word,
+  translation: apiWord.translation,
+  exampleSentence: apiWord.example_sentence,
+  difficulty: apiWord.difficulty,
+  audioUrl: apiWord.audio_url,
+});
+
+// Fetch words
+const { data: apiWords, error: wordsError } = await supabase
   .from("words")
   .select("*");
 if (wordsError) {
@@ -14,8 +34,10 @@ if (wordsError) {
   throw new Error(`Failed to fetch words: ${wordsError.message}`);
 }
 
+const words: Word[] = apiWords?.map(mapApiWordToWord) || [];
+
 // Skip user-specific data during build
-let wordsDue: Word[] = words || [];
+let wordsDue: Word[] = words;
 if (import.meta.env.SSR || import.meta.env.PROD) {
   // In build mode, use all words (no user filtering)
   wordsDue = words || [];
@@ -39,7 +61,9 @@ if (import.meta.env.SSR || import.meta.env.PROD) {
   const now = new Date();
   wordsDue =
     words?.filter((word: Word) => {
-      const wordProgress = progress?.find((p) => p.wordId === word.id);
+      const wordProgress: Progress = progress?.find(
+        (p) => p.wordId === word.id
+      );
       return !wordProgress || new Date(wordProgress.nextReview) <= now;
     }) || [];
 }
