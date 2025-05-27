@@ -7,5 +7,8 @@ import tailwind from "@astrojs/tailwind";
 export default defineConfig({
   integrations: [preact(), tailwind()],
   site: "https://minhvd-11.github.io",
-  base: "/",
+  base: "/index-librorum",
+  build: {
+    assetsPrefix: "/index-librorum",
+  },
 });
