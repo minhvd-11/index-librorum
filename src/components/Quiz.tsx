@@ -1,14 +1,12 @@
-import { h } from "preact";
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect } from "react";
 import { supabase } from "~/lib/supabase";
-import { wordStore } from "~/stores/wordStore";
-import type { Progress, Word } from "~/types";
+import type { Word } from "~/types";
 
 interface Props {
   words: Word[];
 }
 
-export default function Quiz({ words }: Props) {
+const Quiz: React.FC<Props> = ({ words }) => {
   const [currentQuestion, setCurrentQuestion] = useState<Word | null>(null);
   const [options, setOptions] = useState<Word[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -23,8 +21,6 @@ export default function Quiz({ words }: Props) {
       if (!randomOptions.find((w) => w.id === randomWord.id)) {
         randomOptions[Math.floor(Math.random() * 4)] = randomWord;
       }
-      wordStore.setCurrentWord(randomWord);
-      wordStore.setQuizOptions(randomOptions);
       setCurrentQuestion(randomWord);
       setOptions(randomOptions);
     }
@@ -39,18 +35,13 @@ export default function Quiz({ words }: Props) {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
-      const progress: Progress = {
+      const progress = {
         userId: user.id,
         wordId: currentQuestion.id,
-        status: isCorrect ? "learning" : "review",
-        lastReviewed: new Date(),
-        nextReview: new Date(
-          Date.now() + (isCorrect ? 24 : 12) * 60 * 60 * 1000
-        ),
         correctAttempts: isCorrect ? 1 : 0,
-        incorrectAttempts: isCorrect ? 0 : 1,
+        lastReviewed: new Date().toISOString(),
+        nextReview: new Date().toISOString(),
       };
-      wordStore.updateProgress(progress);
       await supabase.from("progress").upsert(progress);
     }
 
@@ -64,8 +55,6 @@ export default function Quiz({ words }: Props) {
       if (!nextOptions.find((w) => w.id === nextWord.id)) {
         nextOptions[Math.floor(Math.random() * 4)] = nextWord;
       }
-      wordStore.setCurrentWord(nextWord);
-      wordStore.setQuizOptions(nextOptions);
       setCurrentQuestion(nextWord);
       setOptions(nextOptions);
     }, 1000);
@@ -102,4 +91,6 @@ export default function Quiz({ words }: Props) {
       )}
     </div>
   );
-}
+};
+
+export default Quiz;

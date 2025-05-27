@@ -3,7 +3,9 @@ import Layout from "../layouts/Layout.astro";
 import Flashcard from "../components/Flashcard";
 import Quiz from "../components/Quiz";
 import { supabase } from "~/lib/supabase";
+import type { Word } from "~/types";
 
+// Fetch words (public data, no auth required)
 const { data: words, error: wordsError } = await supabase
   .from("words")
   .select("*");
@@ -12,27 +14,35 @@ if (wordsError) {
   throw new Error(`Failed to fetch words: ${wordsError.message}`);
 }
 
-const {
-  data: { user },
-  error: userError,
-} = await supabase.auth.getUser();
-if (userError) {
-  console.error("Supabase user error:", userError);
-}
+// Skip user-specific data during build
+let wordsDue: Word[] = words || [];
+if (import.meta.env.SSR || import.meta.env.PROD) {
+  // In build mode, use all words (no user filtering)
+  wordsDue = words || [];
+} else {
+  // In dev mode with client-side, fetch user and progress
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError) {
+    console.warn("Supabase user error:", userError);
+  }
 
-const { data: progress, error: progressError } = user
-  ? await supabase.from("progress").select("*").eq("userId", user.id)
-  : { data: [], error: null };
-if (progressError) {
-  console.error("Supabase progress error:", progressError);
-}
+  const { data: progress, error: progressError } = user
+    ? await supabase.from("progress").select("*").eq("userId", user.id)
+    : { data: [], error: null };
+  if (progressError) {
+    console.error("Supabase progress error:", progressError);
+  }
 
-const now = new Date();
-const wordsDue =
-  words?.filter((word) => {
-    const wordProgress = progress?.find((p) => p.wordId === word.id);
-    return !wordProgress || new Date(wordProgress.nextReview) <= now;
-  }) || [];
+  const now = new Date();
+  wordsDue =
+    words?.filter((word: Word) => {
+      const wordProgress = progress?.find((p) => p.wordId === word.id);
+      return !wordProgress || new Date(wordProgress.nextReview) <= now;
+    }) || [];
+}
 ---
 
 <Layout title="Learn Vocabulary">
@@ -43,7 +53,7 @@ const wordsDue =
         <p class="text-gray-600 dark:text-gray-300">No words due for review.</p>
       ) : (
         <div class="grid gap-4 md:grid-cols-2">
-          {wordsDue.map((word) => (
+          {wordsDue.map((word: Word) => (
             <Flashcard client:load word={word} />
           ))}
         </div>
